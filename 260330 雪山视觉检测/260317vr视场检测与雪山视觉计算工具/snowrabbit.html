@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>雪山兔 · 科研版</title>
+<style>
+body {
+    font-family: Arial;
+    background: white;
+    color: #8b0000;
+    padding: 20px;
+}
+h1 {
+    color: #b30000;
+}
+.card {
+    border: 1px solid #ffcccc;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    background: #fff5f5;
+}
+input {
+    width: 120px;
+    margin: 5px;
+}
+button {
+    background: #cc0000;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+canvas {
+    border: 1px solid #ccc;
+}
+</style>
+</head>
+
+<body>
+
+<h1>雪山兔 · 科研版</h1>
+
+<div class="card">
+<h3>参数输入</h3>
+Ha <input id="Ha" value="1500"> m
+Hmax <input id="Hmax" value="3500"> m
+Hmin <input id="Hmin" value="1000"> m<br>
+s <input id="s" value="2000"> m
+L <input id="L" value="10000"> m<br>
+Fv <input id="Fv" value="130"> deg
+</div>
+
+<div class="card">
+<h3>n 等分</h3>
+n: <input id="n" value="6">
+<button onclick="compute()">计算</button>
+</div>
+
+<div class="card">
+<h3>结果</h3>
+<div id="result"></div>
+</div>
+
+<div class="card">
+<h3>放大率曲线</h3>
+<canvas id="canvas" width="800" height="500"></canvas><br>
+<button onclick="download()">下载PNG</button>
+</div>
+
+<script>
+
+function rad2deg(x){return x*180/Math.PI}
+
+function getXtXb(Hmax,Hmin,s,L){
+    let xt = L - s/2
+    let xb = L + s/2
+    return {xt, xb}
+}
+
+function xH(H,Hmax,Hmin,xt,xb){
+    return xb + (H-Hmin)/(Hmax-Hmin)*(xt-xb)
+}
+
+function theta(H,Ha,Hmax,Hmin,xt,xb){
+    return Math.atan2(H-Ha, xH(H,Hmax,Hmin,xt,xb))
+}
+
+function compute(){
+
+    let Ha = parseFloat(document.getElementById("Ha").value)
+    let Hmax = parseFloat(document.getElementById("Hmax").value)
+    let Hmin = parseFloat(document.getElementById("Hmin").value)
+    let s = parseFloat(document.getElementById("s").value)
+    let L = parseFloat(document.getElementById("L").value)
+    let n = parseInt(document.getElementById("n").value)
+
+    let {xt, xb} = getXtXb(Hmax,Hmin,s,L)
+
+    let dH = (Hmax-Hmin)/n
+
+    let mags = []
+
+    for(let i=0;i<n;i++){
+        let H1 = Hmax - i*dH
+        let H2 = Hmax - (i+1)*dH
+
+        let a = theta(H1,Ha,Hmax,Hmin,xt,xb)
+              - theta(H2,Ha,Hmax,Hmin,xt,xb)
+
+        mags.push(a/dH)
+    }
+
+    let top = mags[0]
+    let rel = mags.map(m => m/top*100)
+
+    // 输出
+    let html = ""
+    rel.forEach((v,i)=>{
+        html += "段"+(i+1)+": "+v.toFixed(2)+"%<br>"
+    })
+    document.getElementById("result").innerHTML = html
+
+    draw(rel)
+}
+
+function draw(arr){
+
+    let canvas = document.getElementById("canvas")
+    let ctx = canvas.getContext("2d")
+
+    ctx.clearRect(0,0,800,500)
+
+    let max = Math.max(...arr)
+    let min = Math.min(...arr)
+
+    ctx.beginPath()
+
+    arr.forEach((v,i)=>{
+        let x = i/(arr.length-1)*700 + 50
+        let y = 450 - (v-min)/(max-min)*400
+
+        if(i==0) ctx.moveTo(x,y)
+        else ctx.lineTo(x,y)
+    })
+
+    ctx.strokeStyle = "red"
+    ctx.lineWidth = 2
+    ctx.stroke()
+}
+
+function download(){
+    let canvas = document.getElementById("canvas")
+    let link = document.createElement("a")
+    link.download = "plot.png"
+    link.href = canvas.toDataURL()
+    link.click()
+}
+
+</script>
+
+</body>
+</html>

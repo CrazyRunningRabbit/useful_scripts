@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>卡牌后台管理</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81'}
+          },
+          boxShadow: { soft:'0 10px 30px rgba(31,41,55,.08)'},
+          borderRadius: { xl2:'1.25rem' },
+          keyframes:{ fadeIn:{'0%':{opacity:0,transform:'translateY(6px)'},'100%':{opacity:1,transform:'translateY(0)'}}},
+          animation:{ fadeIn:'fadeIn .35s ease-out both'}
+        }
+      }
+    }
+  </script>
+
+  <script>
+    function toggleTheme(){
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    }
+    document.addEventListener('DOMContentLoaded', ()=>{
+      if(localStorage.getItem('theme')==='dark'){ document.documentElement.classList.add('dark'); }
+    });
+  </script>
+
+  <style>
+    .bg-decor{
+      background-image:
+        {% if bg_image %}url('{{ bg_image }}'){% else %}url('/static/uploads/yibuleaf.jpg'){% endif %};
+      background-size: cover;
+      background-position: center;
+    }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto; }
+  </style>
+</head>
+
+<body class="h-full text-slate-900 dark:text-slate-100">
+  <div class="min-h-screen bg-decor">
+    <div class="min-h-screen backdrop-blur-md bg-white/70 dark:bg-slate-900/65">
+
+      <header class="sticky top-0 z-30 border-b border-slate-200/60 dark:border-slate-800 bg-gradient-to-r from-brand-600 to-brand-500 text-white">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="h-9 w-9 rounded-xl2 bg-white/20 grid place-content-center text-lg font-bold shadow-soft">C</div>
+            <h1 class="text-lg font-semibold tracking-wide">卡牌后台管理</h1>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="/" class="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25">仪表盘</a>
+            <button onclick="toggleTheme()" class="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25">主题</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- 批量导入 -->
+        <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl2 shadow-soft p-6">
+          <h2 class="text-base font-semibold mb-3">批量导入 Excel / CSV</h2>
+          <form action="/import" method="post" enctype="multipart/form-data" class="flex flex-wrap items-center gap-3">
+            <input type="file" name="file" class="block text-sm" required />
+            <button class="px-4 py-2 rounded-xl bg-brand-600 text-white">导入</button>
+            <a href="/import/template" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700">下载导入模板</a>
+            <span class="text-sm text-slate-700 dark:text-slate-300">
+              第 1 列忽略 第 2 列中文名 第 3 列销售数量 第 4 列价格 第 5 列英文名（可留空）
+            </span>
+          </form>
+        </section>
+
+
+        <!-- 清空所有卡牌 -->
+<section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl2 shadow-soft p-6">
+  <h2 class="text-base font-semibold mb-3">危险操作</h2>
+  <form action="/cards/clear_all" method="post"
+        onsubmit="return confirm('确定要删除所有卡牌以及它们的历史价格吗？此操作不可恢复');">
+    <button class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white">
+      清空所有卡牌与历史价格
+    </button>
+    <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+      仅清空 cards 与 price_history，两者都会被删除。分类与图片文件不会被自动删除。
+    </p>
+  </form>
+</section>
+
+        <!-- 背景上传 -->
+        <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl2 shadow-soft p-6">
+          <h2 class="text-base font-semibold mb-3">外观设置</h2>
+          <form action="/appearance/bg" method="post" enctype="multipart/form-data" class="flex items-center gap-3 flex-wrap">
+            <input type="file" name="file" accept=".png,.jpg,.jpeg,.webp" class="block text-sm" />
+            <button class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white">上传背景图片</button>
+            {% if bg_image %}
+              <span class="text-sm text-slate-800 dark:text-slate-200">当前背景：{{ bg_image }}</span>
+            {% endif %}
+          </form>
+        </section>
+
+        <!-- 分类 与 新增卡牌 -->
+        <div class="grid md:grid-cols-2 gap-6">
+
+          <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl2 shadow-soft p-6">
+            <h2 class="text-base font-semibold mb-3">新增分类</h2>
+            <form action="/category/new" method="post" class="flex gap-2">
+              <input name="name" required placeholder="分类名"
+                     class="flex-1 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800" />
+              <button class="px-4 py-2 rounded-xl bg-brand-600 text-white">添加</button>
+            </form>
+            <h3 class="text-sm mt-5 mb-2 text-slate-500">分类列表</h3>
+            <div class="flex flex-wrap gap-2">
+              {% for c in categories %}
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800">
+                  <span class="text-sm">{{ c.name }}</span>
+                  <form action="/category/delete" method="post" onsubmit="return confirm('确认删除？')">
+                    <input type="hidden" name="category_id" value="{{ c.id }}" />
+                    <button class="text-xs text-slate-500 hover:text-rose-600">删除</button>
+                  </form>
+                </div>
+              {% else %}
+                <span class="text-sm text-slate-500">暂无分类</span>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl2 shadow-soft p-6">
+            <h2 class="text-base font-semibold mb-3">新增卡牌</h2>
+            <form action="/card/new" method="post" class="grid gap-3">
+              <input name="name" required placeholder="中文名称"
+                     class="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800" />
+              <input name="lang" placeholder="英文名称（可留空）"
+                     class="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800" />
+              <div class="grid grid-cols-2 gap-3">
+                <input name="price" type="number" step="0.01" placeholder="价格"
+                       class="px-3 py-2 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800" />
+                <select name="category_id"
+                        class="px-3 py-2 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800">
+                  <option value="">分类</option>
+                  {% for c in categories %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <input name="series" placeholder="系列"
+                       class="px-3 py-2 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800" />
+                <input name="code" placeholder="编号"
+                       class="px-3 py-2 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <input name="rarity" placeholder="稀有度"
+                       class="px-3 py-2 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800" />
+                <input name="stock" type="number" placeholder="库存"
+                       class="px-3 py-2 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800" />
+              </div>
+              <input name="image_url" placeholder="图片 URL（通常留空，系统按中文名匹配）"
+                     class="px-3 py-2 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800" />
+              <button class="px-4 py-2 rounded-xl bg-brand-600 text-white">添加</button>
+            </form>
+          </section>
+        </div>
+
+        <!-- 列表 -->
+        <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl2 shadow-soft p-6">
+          <h2 class="text-base font-semibold mb-4">卡牌列表好好看看</h2>
+
+          <div class="overflow-auto border border-slate-200 dark:border-slate-800 rounded-xl2 shadow-soft">
+            <table class="min-w-full text-sm">
+              <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
+                <tr class="text-left text-slate-600 dark:text-slate-300">
+                  <th class="py-3 px-3">图</th>
+                  <th class="py-3 px-3">中文名</th>
+                  <th class="py-3 px-3">英文名</th>
+                  <th class="py-3 px-3">价格</th>
+                  <th class="py-3 px-3">分类</th>
+                  <th class="py-3 px-3">库存</th>
+                  <th class="py-3 px-3">操作</th>
+                </tr>
+              </thead>
+              <tbody class="[&>tr:nth-child(even)]:bg-slate-50/60 dark:[&>tr:nth-child(even)]:bg-slate-900/40">
+                {% for k in cards %}
+                <tr class="hover:bg-brand-50/50 dark:hover:bg-brand-900/20">
+                  <td class="py-3 px-3">
+                    {% if k.image_url %}
+                      <img src="{{ k.image_url }}" class="h-12 w-12 rounded-lg object-cover">
+                    {% else %}
+                      <span class="text-slate-400">无图</span>
+                    {% endif %}
+                  </td>
+                  <td class="py-3 px-3 font-medium">{{ k.name }}</td>
+                  <td class="py-3 px-3">{{ k.lang or '—' }}</td>
+                  <td class="py-3 px-3">{{ '%.2f'|format(k.price) }}</td>
+                  <td class="py-3 px-3">{{ k.category.name if k.category else '无' }}</td>
+                  <td class="py-3 px-3">{{ k.stock if k.stock is not none else '—' }}</td>
+                  <td class="py-3 px-3">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <a href="/card/{{ k.id }}/history"
+                         class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700">历史价格</a>
+                      <button type="button" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white"
+                              onclick="toggleHistory('hist-{{ k.id }}','{{ k.id }}')">折线图</button>
+                      <button type="button" class="px-3 py-1.5 rounded-lg bg-brand-600 text-white"
+                              onclick="toggleEdit('edit-{{ k.id }}')">编辑</button>
+                      <form action="/card/delete" method="post" onsubmit="return confirm('确认删除？')">
+                        <input type="hidden" name="card_id" value="{{ k.id }}" />
+                        <button class="px-3 py-1.5 rounded-lg bg-rose-600 text-white">删除</button>
+                      </form>
+                    </div>
+
+                    <div id="hist-{{ k.id }}" class="hidden mt-3">
+                      <img id="hist-img-{{ k.id }}" src="/card/{{ k.id }}/history.png"
+                           class="max-w-full rounded-xl border border-slate-200 dark:border-slate-700" />
+                    </div>
+
+                    <form id="edit-{{ k.id }}" action="/card/update" method="post"
+                          class="hidden mt-3 border border-slate-300 dark:border-slate-700 rounded-xl p-3 bg-slate-50/60 dark:bg-slate-900/40 space-y-2">
+                      <input type="hidden" name="card_id" value="{{ k.id }}" />
+                      <input name="name" value="{{ k.name }}"
+                             class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700"
+                             placeholder="中文名" required />
+                      <input name="lang" value="{{ k.lang or '' }}"
+                             class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700"
+                             placeholder="英文名（可留空）" />
+                      <input name="price" type="number" step="0.01" value="{{ k.price }}"
+                             class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700"
+                             placeholder="价格" />
+                      <select name="category_id"
+                              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700">
+                        <option value="">无分类</option>
+                        {% for c in categories %}
+                          <option value="{{ c.id }}" {% if k.category and k.category.id == c.id %}selected{% endif %}>
+                            {{ c.name }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                      <input name="stock" value="{{ k.stock if k.stock is not none else '' }}"
+                             class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700"
+                             placeholder="库存数量" />
+                      <input name="image_url" value="{{ k.image_url or '' }}"
+                             class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700"
+                             placeholder="图片URL（通常留空，系统自动匹配）" />
+                      <div class="flex gap-2">
+                        <button class="px-4 py-2 rounded-xl bg-brand-600 text-white">保存</button>
+                        <button type="button" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700"
+                                onclick="toggleEdit('edit-{{ k.id }}')">关闭</button>
+                      </div>
+                    </form>
+                  </td>
+                </tr>
+                {% else %}
+                  <tr><td class="py-6 px-3 text-slate-500" colspan="7">暂无卡牌</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      <div id="toast" class="fixed right-4 top-4 hidden px-4 py-2 bg-slate-900 text-white rounded-xl shadow-soft">已保存</div>
+
+      <script>
+        function toggleEdit(id){
+          const el = document.getElementById(id);
+          if(el) el.classList.toggle('hidden');
+        }
+        function toggleHistory(id, cardId){
+          const box = document.getElementById(id);
+          if(!box) return;
+          const img = document.getElementById("hist-img-"+cardId);
+          img.src = "/card/" + cardId + "/history.png?ts=" + Date.now();
+          box.classList.toggle("hidden");
+        }
+        (function(){
+          const params = new URLSearchParams(location.search);
+          if(params.get('ok') === '1'){
+            const t = document.getElementById('toast');
+            t.classList.remove('hidden');
+            setTimeout(()=> t.classList.add('hidden'), 1500);
+          }
+        })();
+      </script>
+
+    </div>
+  </div>
+</body>
+</html>

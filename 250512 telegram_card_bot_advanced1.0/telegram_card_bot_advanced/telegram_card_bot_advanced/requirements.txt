@@ -1,0 +1,8 @@
+aiogram==3.13.1
+fastapi==0.115.4
+uvicorn==0.32.0
+SQLAlchemy==2.0.36
+python-dotenv==1.0.1
+pydantic==2.9.2
+Jinja2==3.1.4
+python-multipart==0.0.9
