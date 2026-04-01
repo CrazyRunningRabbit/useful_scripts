@@ -17,6 +17,7 @@ video_extensions = [
     ".m4v",
     ".webm",
     ".flv"
+    
 ]
 
 for file in input_folder.rglob("*"):
